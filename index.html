@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' http://localhost:11434 https://generativelanguage.googleapis.com; object-src 'none'; base-uri 'self';">
+  <title>5D 生活問題小幫手 - 5D 思考與分析報告工具</title>
+  <link rel="stylesheet" href="css/style.css">
+  <!-- 本機離線依賴庫 -->
+  <script src="libs/jszip.min.js"></script>
+  <script>
+    if (typeof window !== 'undefined' && window.JSZip) {
+      var JSZip = window.JSZip;
+    }
+  </script>
+  <script src="libs/pptxgen.min.js"></script>
+</head>
+<body>
+
+  <!-- 頂部功能列 -->
+  <header class="navbar">
+    <div class="nav-brand">
+      <span class="brand-badge">5D 思考法</span>
+      <span class="brand-title">5D 生活問題小幫手</span>
+      <span style="margin-left: 10px; padding: 3px 10px; border-radius: 999px; background: rgba(255,255,255,0.12); font-size: 12px; color: #e2e8f0; display: inline-flex; align-items: center; gap: 6px;">
+        <span>完整度</span>
+        <strong id="audit-score-num" style="color: #38bdf8; font-size: 13px;">0%</strong>
+        <span id="audit-score-tag" class="score-tag" style="margin-left: 2px;">評估中</span>
+      </span>
+    </div>
+    <div class="nav-actions">
+      <button id="btn-load-life-demo" class="btn btn-secondary btn-sm" title="載入小豬弟弟拿玩偶的生活案例">載入生活實例</button>
+      <button id="btn-reset-form" class="btn btn-secondary btn-sm" title="清空所有內容重新開始">清空重寫</button>
+
+      <button id="btn-export-word" class="btn btn-primary" title="下載為 Word (.doc) 報告檔案">
+        <span>產出 Word 報告</span>
+      </button>
+      <button id="btn-export-ppt" class="btn btn-success" title="下載為 PowerPoint (.pptx) 簡報">
+        <span>產出 PPT 簡報</span>
+      </button>
+      <button id="btn-print-report" class="btn btn-secondary btn-sm" title="列印或直接另存為 PDF">列印 / PDF</button>
+    </div>
+  </header>
+
+  <!-- 主版面結構（單欄居中極簡化設計） -->
+  <div class="main-layout">
+    
+    <!-- 隱藏側邊欄 DOM 容器（保留元素 ID 相容性，避免左右雙重提醒造成視覺混亂） -->
+    <aside class="sidebar" style="display: none;">
+      <div id="audit-score-bar"></div>
+      <div id="reminder-container"></div>
+    </aside>
+
+    <!-- 核心工作區 -->
+    <main class="content-area">
+      
+      <!-- 標籤導覽 (Tabs) - 精簡 7 步流程 -->
+      <nav class="tab-nav">
+        <button class="tab-btn active" data-tab="tab-smart-input" style="color: var(--accent); font-weight: 800;">1. 輸入事件與小幫手</button>
+        <button class="tab-btn" data-tab="tab-basic" style="display: none;">事情與主角</button>
+        <button class="tab-btn" data-tab="tab-d1">D1 發生什麼事</button>
+        <button class="tab-btn" data-tab="tab-d2">D2 緊急怎麼做</button>
+        <button class="tab-btn" data-tab="tab-d3">D3 為什麼會這樣</button>
+        <button class="tab-btn" data-tab="tab-d4">D4 以後怎麼改善</button>
+        <button class="tab-btn" data-tab="tab-d5">D5 訂立生活約定</button>
+        <button class="tab-btn" data-tab="tab-preview" style="color: var(--primary); font-weight: 800; margin-left: auto;">預覽完整報告</button>
+      </nav>
+
+      <!-- Panel: 智慧對話與文字分析 -->
+      <div id="tab-smart-input" class="tab-panel active">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="raw-input-text" style="font-size: 15px; color: var(--primary);">請用平常說話的方式，在下方描述發生的事情經過：</label>
+          <textarea id="raw-input-text" class="form-control" style="min-height: 115px; font-size: 14px;" placeholder="直接把發生的事情打出來（例如：誰做了什麼事、在什麼時間地點發生、造成什麼結果）..."></textarea>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-bottom: 18px; align-items: center; flex-wrap: wrap;">
+          <button id="btn-parse-text" class="btn btn-primary" style="padding: 9px 18px; font-size: 14px;">
+            <span>開始分析並整理報告</span>
+          </button>
+          <button id="btn-paste-sample-text" class="btn btn-secondary" style="display: none;">帶入生活案例文字</button>
+          <button id="btn-toggle-ai-settings" class="btn btn-secondary btn-sm" style="margin-left: auto; color: var(--text-muted);">進階 AI 設定（選填）</button>
+        </div>
+
+        <!-- 可選 AI 模型設定抽屜 -->
+        <div id="ai-settings-box" class="card" style="display: none; margin-bottom: 18px; background-color: var(--bg-subtle);">
+          <div class="card-body">
+            <div style="font-weight: 700; color: var(--primary); margin-bottom: 8px;">進階 AI 模型連線設定（預設為 100% 離線內建引擎）</div>
+            <div class="form-grid-3">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label for="llm-provider">模型架構來源</label>
+                <select id="llm-provider" class="form-control">
+                  <option value="offline-rules" selected>本機內建語意解析引擎（100% 離線免連網）</option>
+                  <option value="ollama">本機 Ollama 離線伺服器（http://localhost:11434）</option>
+                  <option value="gemini">Google Gemini API（需輸入 API Key）</option>
+                </select>
+              </div>
+              <div class="form-group" id="group-api-key" style="display: none; margin-bottom: 0;">
+                <label for="llm-api-key">API Key</label>
+                <input type="password" id="llm-api-key" class="form-control" autocomplete="off" placeholder="輸入 API 金鑰（僅於當下記憶體傳輸，不寫入本機儲存）">
+              </div>
+              <div class="form-group" id="group-model-name" style="display: none; margin-bottom: 0;">
+                <label for="llm-model-name">模型代號（Model Name）</label>
+                <input type="text" id="llm-model-name" class="form-control" value="gemini-2.5-flash" placeholder="例如：gemini-2.5-flash">
+              </div>
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 8px; line-height: 1.5;">
+              隱私與環境提醒：預設離線內建引擎免連網即可完整運作。若於共用電腦使用 Gemini API 請勿讓瀏覽器記住金鑰；若透過線上網址串接本機 Ollama，需先於本機設定 <code>OLLAMA_ORIGINS=*</code> 開放跨域連線。
+            </div>
+          </div>
+        </div>
+
+        <!-- 目前已整理與補充之 5D 報告即時看板 -->
+        <div id="live-5d-summary-card" class="card" style="display: none; margin-bottom: 18px; border-left: 4px solid var(--success);">
+          <div class="card-header" style="background-color: #f0fdf4; border-bottom: 1px solid #bbf7d0;">
+            <span style="color: #166534;">目前已整理的 5D 報告內容（每次補充皆會即時更新於此）</span>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="switchToTab('tab-preview')">查看完整排版報告</button>
+          </div>
+          <div class="card-body" id="live-5d-summary-body" style="padding: 14px 16px;">
+            <!-- 動態渲染目前已整理與補充之 5D 摘要 -->
+          </div>
+        </div>
+
+        <!-- 智慧追問小助理 -->
+        <div class="card">
+          <div class="card-header">
+            <span>小幫手貼心提問（幫你把缺漏的細節補齊）</span>
+            <span id="interview-status-badge" class="score-tag" style="background-color: var(--primary-light); color: var(--accent);">準備就緒</span>
+          </div>
+          <div class="card-body">
+            <div id="interview-chat-container" style="display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto; padding-right: 4px;">
+              <!-- 動態追問問題卡片 -->
+            </div>
+
+            <!-- 追問快速回覆輸入列 -->
+            <div id="interview-reply-box" style="display: none; margin-top: 14px; border-top: 1px solid var(--border-color); padding-top: 12px;">
+              <div style="font-weight: 700; font-size: 13px; margin-bottom: 6px; color: var(--primary);">在下面回答問題，小幫手會自動幫你補進報告裡：</div>
+              <div style="display: flex; gap: 8px;">
+                <input type="text" id="interview-reply-input" class="form-control" placeholder="輸入要補充的內容...">
+                <button id="btn-submit-interview-reply" class="btn btn-primary btn-sm">送出回答</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 隱藏之次要行政欄位容器（保留資料模型雙向綁定相容性） -->
+      <div id="tab-basic" class="tab-panel" style="display: none !important;">
+        <input type="text" id="reportId" data-bind="reportId">
+        <select id="severity" data-bind="severity">
+          <option value="極重大事件（人身受傷、重大物品損壞）">極重大事件（人身受傷、重大物品損壞）</option>
+          <option value="重大影響（違反約定、擅自拿取或信任破壞）" selected>重大影響（違反約定、擅自拿取或信任破壞）</option>
+          <option value="一般提醒（言語口角、小摩擦或粗心遺忘）">一般提醒（言語口角、小摩擦或粗心遺忘）</option>
+        </select>
+        <input type="text" id="partNumber" data-bind="partNumber">
+        <input type="text" id="customerLine" data-bind="customerLine">
+        <input type="text" id="lotNumber" data-bind="lotNumber">
+        <input type="text" id="machineNumber" data-bind="machineNumber">
+        <input type="text" id="approver" data-bind="approver">
+        <input type="date" id="dateCreated" data-bind="dateCreated">
+        <input type="date" id="targetCloseDate" data-bind="targetCloseDate">
+      </div>
+
+      <!-- Panel: D1 問題定義（整合核心主角與人事時地物） -->
+      <div id="tab-d1" class="tab-panel">
+        <div class="section-title">
+          <span>第一步：到底發生了什麼事？（D1 問題定義）</span>
+          <span class="hint">把人、事、時、地、物與造成的影響寫清楚</span>
+        </div>
+
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label for="title">事件標題名稱 <span class="required">*</span></label>
+            <input type="text" id="title" class="form-control" data-bind="title" placeholder="例如：玩手機熬夜致上學遲到事件">
+          </div>
+          <div class="form-group">
+            <label for="partName">涉及的物品或事情</label>
+            <input type="text" id="partName" class="form-control" data-bind="partName" placeholder="例如：手機、作業、姊姊的玩偶">
+          </div>
+          <div class="form-group">
+            <label for="owner">負責記錄與調解人</label>
+            <input type="text" id="owner" class="form-control" data-bind="owner" placeholder="例如：家長 / 老師 / 學生本人">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="d1-problemDesc">事情完整經過描述 <span class="required">*</span></label>
+          <textarea id="d1-problemDesc" class="form-control" data-bind="d1.problemDesc" placeholder="請詳細說出發生的事實經過..."></textarea>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="d1-who">1. 誰做的？影響了誰？（Who）</label>
+            <input type="text" id="d1-who" class="form-control" data-bind="d1.who" placeholder="例如：行為人：小明；受影響人：家人">
+          </div>
+          <div class="form-group">
+            <label for="d1-when">2. 什麼時候發生的？（When）</label>
+            <input type="text" id="d1-when" class="form-control" data-bind="d1.when" placeholder="例如：昨天夜間至清晨 1 點、今天早上">
+          </div>
+          <div class="form-group">
+            <label for="d1-where">3. 在什麼地方發生的？（Where）</label>
+            <input type="text" id="d1-where" class="form-control" data-bind="d1.where" placeholder="例如：家中個人臥室 / 學校教室">
+          </div>
+          <div class="form-group">
+            <label for="d1-why">4. 違反了什麼規矩或約定？（Why）</label>
+            <input type="text" id="d1-why" class="form-control" data-bind="d1.why" placeholder="例如：違反睡前收納手機與準時上學的約定">
+          </div>
+          <div class="form-group">
+            <label for="d1-how">5. 這件事是怎麼被發現的？（How）</label>
+            <input type="text" id="d1-how" class="form-control" data-bind="d1.how" placeholder="例如：早上叫不醒延誤出門才被家人發現">
+          </div>
+          <div class="form-group">
+            <label for="d1-impactScope">6. 對大家的感受與造成的影響</label>
+            <input type="text" id="d1-impactScope" class="form-control" data-bind="d1.impactScope" placeholder="例如：造成早上起不來上學遲到、精神不濟">
+          </div>
+        </div>
+
+        <!-- 隱藏次要重複細項欄位 -->
+        <div style="display: none;">
+          <input type="text" id="d1-what" data-bind="d1.what">
+          <input type="text" id="d1-howMany" data-bind="d1.howMany">
+          <input type="text" id="d1-defectRate" data-bind="d1.defectRate">
+        </div>
+      </div>
+
+      <!-- Panel: D2 緊急處置 -->
+      <div id="tab-d2" class="tab-panel">
+        <div class="section-title">
+          <span>第二步：當下緊急怎麼處理？（D2 緊急處置）</span>
+          <span class="hint">發生當下立刻做了什麼應變，先讓狀況穩定下來</span>
+        </div>
+
+        <!-- 隱藏舊版三段庫存欄位（自動由緊急行動同步） -->
+        <div style="display: none;">
+          <input type="text" id="d2-factoryStock" data-bind="d2.factoryStock">
+          <input type="text" id="d2-transitStock" data-bind="d2.transitStock">
+          <input type="text" id="d2-customerStock" data-bind="d2.customerStock">
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+          <strong style="color: var(--primary);">當下立刻做的緊急行動清單</strong>
+          <button id="btn-add-d2-action" class="btn btn-primary btn-sm">+ 新增緊急行動</button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>具體做了什麼處置</th>
+                <th style="width: 120px;">誰負責</th>
+                <th style="width: 140px;">完成時間</th>
+                <th style="width: 120px;">目前進度</th>
+                <th>確認的結果</th>
+                <th style="width: 60px; text-align: center;">操作</th>
+              </tr>
+            </thead>
+            <tbody id="d2-actions-tbody">
+              <!-- 動態渲染 -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label for="d2-containmentVerification">緊急處理後的確認結果</label>
+          <input type="text" id="d2-containmentVerification" class="form-control" data-bind="d2.containmentVerification" placeholder="例如：當下狀況已妥善控制，雙方心情平復，未衍生其他問題。">
+        </div>
+      </div>
+
+      <!-- Panel: D3 根本原因 -->
+      <div id="tab-d3" class="tab-panel">
+        <div class="section-title">
+          <span>第三步：為什麼會這樣？（D3 連問為什麼找原因）</span>
+          <span class="hint">不要只怪「他不乖」，一步步往下問，找出心裡真正的原因</span>
+        </div>
+
+        <!-- 發生原因 5 Why -->
+        <div style="margin-bottom: 18px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+            <strong style="color: var(--primary);">為什麼會想這麼做？（動機原因推導）</strong>
+            <button id="btn-add-why-made" class="btn btn-primary btn-sm">+ 多問一層為什麼</button>
+          </div>
+          <div id="why-made-chain" class="why-chain-container">
+            <!-- 動態渲染 Why Cards -->
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="d3-rootCauseSummary">最後找出的真正原因總結 <span class="required">*</span></label>
+          <textarea id="d3-rootCauseSummary" class="form-control" data-bind="d3.rootCauseSummary" style="min-height: 75px;" placeholder="請總結：心裡真正的想法或動機是什麼？家裡的規矩或習慣在哪裡漏掉了？"></textarea>
+        </div>
+
+        <!-- 次要把關機制收納為可選展開 -->
+        <details style="margin-top: 12px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px 14px; background: var(--bg-subtle);">
+          <summary style="cursor: pointer; font-weight: 700; font-size: 13px; color: var(--text-muted);">
+            進階思考（選填）：為什麼當時沒有人察覺或及時阻止？
+          </summary>
+          <div style="margin-top: 12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+              <span style="font-size: 12.5px; color: var(--text-muted);">找出環境或日常規矩上的漏洞</span>
+              <button id="btn-add-why-escaped" class="btn btn-secondary btn-sm">+ 新增環境漏洞原因</button>
+            </div>
+            <div id="why-escaped-chain" class="why-chain-container"></div>
+          </div>
+        </details>
+      </div>
+
+      <!-- Panel: D4 改善行動 -->
+      <div id="tab-d4" class="tab-panel">
+        <div class="section-title">
+          <span>第四步：以後怎麼改善與補償？（D4 改善行動）</span>
+          <span class="hint">提出認真的道歉、有誠意的補償，並調整生活習慣</span>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+          <strong style="color: var(--primary);">具體的改善與補償行動清單</strong>
+          <button id="btn-add-d4-action" class="btn btn-primary btn-sm">+ 新增改善行動</button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>改善與補償做法</th>
+                <th style="width: 130px;">類別</th>
+                <th style="width: 110px;">誰去做</th>
+                <th style="width: 130px;">完成期限</th>
+                <th style="width: 100px;">進度</th>
+                <th>成效驗證</th>
+                <th style="width: 60px; text-align: center;">操作</th>
+              </tr>
+            </thead>
+            <tbody id="d4-actions-tbody">
+              <!-- 動態渲染 -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="d4-beforeMetric">改善前的狀況</label>
+            <input type="text" id="d4-beforeMetric" class="form-control" data-bind="d4.beforeMetric" placeholder="例如：睡前把手機帶進房間，熬夜玩到清晨遲到">
+          </div>
+          <div class="form-group">
+            <label for="d4-afterMetric">改善後的目標或表現</label>
+            <input type="text" id="d4-afterMetric" class="form-control" data-bind="d4.afterMetric" placeholder="例如：連續 7 天睡前把手機放客廳，準時起床零遲到">
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label for="d4-validationConclusion">大家共同認可的改善結論</label>
+          <input type="text" id="d4-validationConclusion" class="form-control" data-bind="d4.validationConclusion" placeholder="例如：改善行動已確實執行，生活作息與家庭信任順利恢復。">
+        </div>
+      </div>
+
+      <!-- Panel: D5 生活公約 -->
+      <div id="tab-d5" class="tab-panel">
+        <div class="section-title">
+          <span>第五步：訂下生活公約與見證（D5 生活公約）</span>
+          <span class="hint">把好習慣變成全家或班級共同遵守的生活公約</span>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+          <strong style="color: var(--primary);">新訂立的生活約定（公約清單）</strong>
+          <button id="btn-add-d5-doc" class="btn btn-primary btn-sm">+ 新增生活約定</button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 160px;">約定類別</th>
+                <th style="width: 150px;">公約編號</th>
+                <th>公約名稱與內容</th>
+                <th style="width: 135px;">訂立日期</th>
+                <th style="width: 110px;">提醒人</th>
+                <th style="width: 60px; text-align: center;">操作</th>
+              </tr>
+            </thead>
+            <tbody id="d5-docs-tbody">
+              <!-- 動態渲染 -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="form-grid-3" style="margin-top: 16px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="d5-qaComment">家長或老師的見證評語</label>
+            <input type="text" id="d5-qaComment" class="form-control" data-bind="d5.signOff.qaComment" placeholder="例如：態度誠懇，公約已張貼落實，同意結案。">
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="d5-qaStatus">處理結果判定</label>
+            <select id="d5-qaStatus" class="form-control" data-bind="d5.signOff.qaStatus">
+              <option value="觀察改善中">觀察改善中</option>
+              <option value="同意圓滿結案" selected>同意圓滿結案</option>
+              <option value="還沒做好，需再加強">還沒做好，需再加強</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="d5-signDate">見證確認日期</label>
+            <input type="date" id="d5-signDate" class="form-control" data-bind="d5.signOff.signDate">
+          </div>
+        </div>
+
+        <!-- 次要舉一反三表格收納為可選展開 -->
+        <details style="margin-top: 16px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px 14px; background: var(--bg-subtle);">
+          <summary style="cursor: pointer; font-weight: 700; font-size: 13px; color: var(--text-muted);">
+            進階延伸（選填）：舉一反三，還有哪些類似的東西或場合也要一起注意？
+          </summary>
+          <div style="margin-top: 12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+              <span style="font-size: 12.5px; color: var(--text-muted);">防範其他類似情況發生</span>
+              <button id="btn-add-d5-horizontal" class="btn btn-secondary btn-sm">+ 新增注意項目</button>
+            </div>
+            <div class="table-responsive" style="margin-bottom: 0;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>其他要注意的對象或物品</th>
+                    <th>大家講好的做法</th>
+                    <th style="width: 140px;">實施時間</th>
+                    <th style="width: 110px;">狀態</th>
+                    <th style="width: 110px;">負責人</th>
+                    <th style="width: 60px; text-align: center;">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="d5-horizontal-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <!-- Panel: 報告即時預覽 -->
+      <div id="tab-preview" class="tab-panel">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
+          <div class="hint">這是標準 A4 完整生活分析報告，可以直接印出或下載 Word / PPT 保存！</div>
+          <div style="display:flex; gap:8px;">
+            <button onclick="window.print()" class="btn btn-secondary btn-sm">列印此報告</button>
+          </div>
+        </div>
+        <div class="preview-paper" id="preview-content-container">
+          <!-- 動態渲染預覽內容 -->
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- 提示訊息容器 -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- 本機離線範例數據 -->
+  <script src="data/sample-data.js"></script>
+  <!-- 核心應用程式邏輯 -->
+  <script src="js/app.js"></script>
+</body>
+</html>

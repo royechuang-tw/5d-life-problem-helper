@@ -1,0 +1,20 @@
+{
+  "name": "5d-life-problem-helper",
+  "version": "1.0.0",
+  "description": "5D 生活問題小幫手：專為家庭與校園設計的 5D 思考法引導與結構化分析報告工具（支援 100% 離線解析、Word 與 PPT 匯出）",
+  "main": "index.html",
+  "scripts": {
+    "test": "node -c js/app.js && node -c data/sample-data.js"
+  },
+  "keywords": [
+    "5D",
+    "problem-solving",
+    "5-why",
+    "5w2h",
+    "education",
+    "family-agreement",
+    "offline-tool"
+  ],
+  "author": "royechuang-tw",
+  "license": "MIT"
+}
