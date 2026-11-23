@@ -2304,8 +2304,7 @@ function initSmartInput() {
   if (btnAutoDemo) {
     btnAutoDemo.addEventListener('click', () => {
       const sel = document.getElementById('demo-scenario-select');
-      const speedSel = document.getElementById('demo-speed-select');
-      runShortVideoAutoDemo(sel ? sel.value : 'phone', speedSel ? speedSel.value : 'fast');
+      runShortVideoAutoDemo(sel ? sel.value : 'phone');
     });
   }
 
@@ -2314,8 +2313,7 @@ function initSmartInput() {
     if (e.altKey && (e.key === 'd' || e.key === 'D')) {
       e.preventDefault();
       const sel = document.getElementById('demo-scenario-select');
-      const speedSel = document.getElementById('demo-speed-select');
-      runShortVideoAutoDemo(sel ? sel.value : 'phone', speedSel ? speedSel.value : 'fast');
+      runShortVideoAutoDemo(sel ? sel.value : 'phone');
     }
   });
 }
@@ -2333,7 +2331,7 @@ const AUTO_DEMO_SCENARIOS = {
 };
 
 // 短影音錄製專用：一鍵自動模擬真人逐字輸入、分析、補充看板更新至 100% 並切換 A4 報告預覽
-window.runShortVideoAutoDemo = async function(scenarioKey = 'phone', speedMode = 'fast') {
+window.runShortVideoAutoDemo = async function(scenarioKey = 'phone') {
   if (isAutoDemoRunning) return;
   isAutoDemoRunning = true;
   const btnAuto = document.getElementById('btn-auto-demo');
@@ -2342,15 +2340,12 @@ window.runShortVideoAutoDemo = async function(scenarioKey = 'phone', speedMode =
     btnAuto.textContent = '示範播放中...';
   }
 
-  const isNormal = speedMode === 'normal';
-  const charDelay = isNormal ? 95 : 50;
-  const stepDelay = isNormal ? 2600 : 1350;
   const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
   try {
     // 1. 清空重寫回到第一步純淨畫面
     clearAllReportData();
-    await sleep(isNormal ? 1000 : 550);
+    await sleep(600);
 
     // 2. 模擬真人逐字輸入案例文字
     const demoText = AUTO_DEMO_SCENARIOS[scenarioKey] || AUTO_DEMO_SCENARIOS.phone;
@@ -2360,33 +2355,33 @@ window.runShortVideoAutoDemo = async function(scenarioKey = 'phone', speedMode =
       textarea.value = '';
       for (const ch of demoText) {
         textarea.value += ch;
-        await sleep(charDelay);
+        await sleep(55);
       }
     }
-    await sleep(isNormal ? 1200 : 650);
+    await sleep(700);
 
     // 3. 觸發分析並展開即時看板與小幫手提問
     parseRawTextTo5D(demoText);
-    await sleep(stepDelay);
+    await sleep(1400);
 
     // 4. 自動點選第 1 題建議參考，展示綠色「最新補充已寫入報告」與「剛更新」標籤
     if (currentPendingQuestions && currentPendingQuestions.length > 0) {
       const firstQ = currentPendingQuestions[0];
       applyQuickAnswer(firstQ.field, firstQ.quickVal);
     }
-    await sleep(stepDelay);
+    await sleep(1400);
 
     // 5. 自動一鍵代入剩餘全部建議參考，完整度達標 100%
     if (typeof window.applyAllQuickAnswers === 'function') {
       window.applyAllQuickAnswers();
     }
-    await sleep(stepDelay);
+    await sleep(1500);
 
     // 6. 自動切換至「預覽完整報告」展示 A4 正式生活約定單並平滑捲動瀏覽
     switchToTab('tab-preview');
-    await sleep(isNormal ? 1800 : 900);
+    await sleep(900);
     window.scrollTo({ top: 420, behavior: 'smooth' });
-    await sleep(isNormal ? 2000 : 1000);
+    await sleep(1000);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   } finally {
     isAutoDemoRunning = false;
