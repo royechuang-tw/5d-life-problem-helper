@@ -2559,16 +2559,18 @@ function parseRawTextTo5D(text) {
   };
 
   // 3. 忠實萃取文字中客觀存在之實體（人、事、時、地、物與使用者在文字中已寫出之原因/處置/改善）
-  // (A) 人物識別（支援擴充稱謂詞庫與「小X / 阿X」常見小名動態捕捉，並依原文出現順序排序）
+  // (A) 人物識別（支援擴充稱謂詞庫與「小X / 阿X」常見小名動態捕捉，並依原文出現順序排序與同義詞去重）
   const matchedActors = [];
   const knownNames = [
-    '小豬弟弟', '小雞姊姊', '體育股長', '風紀股長', '衛生股長', '學藝股長', '副班長',
-    '班長阿明', '班長', '股長', '大毛', '小強', '小華', '小明', '小美', '小芳', '小杰', '小凱', '小豬',
+    '小豬弟弟', '小雞姊姊', '保健室阿姨', '安親班老師', '補習班老師', '導護老師', '科任老師',
+    '體育股長', '風紀股長', '衛生股長', '學藝股長', '副班長',
+    '班長阿明', '班長', '股長', '大毛', '小強', '小華', '小明', '小美', '小芳', '小杰', '小凱', '小宇', '小豬',
     '阿哲', '阿豪', '阿凱', '阿明', '阿志', '阿宏',
     '表哥', '表姊', '表姐', '表弟', '表妹', '堂哥', '堂姊', '堂姐', '堂弟', '堂妹',
     '哥哥', '姊姊', '姐姐', '弟弟', '妹妹', '孫子', '孫女', '兒子', '女兒',
     '外公', '外婆', '阿公', '阿嬤', '爺爺', '奶奶', '媽媽', '爸爸', '母親', '父親',
-    '家長', '家人', '長輩', '大人', '導師', '老師', '教練', '主任', '校長',
+    '護理師', '校護', '導師', '老師', '教練', '主任', '校長', '警衛',
+    '家長', '家人', '長輩', '大人',
     '學長', '學姊', '學姐', '學弟', '學妹', '室友', '同桌', '隊友', '同學', '朋友'
   ];
   knownNames.sort((a, b) => b.length - a.length);
@@ -2599,13 +2601,17 @@ function parseRawTextTo5D(text) {
     }
   }
   matchedActors.sort((a, b) => a.pos - b.pos);
-  const whoList = matchedActors.map(item => item.name);
+  const rawWhoList = matchedActors.map(item => item.name);
+  const specificElders = new Set(['媽媽', '爸爸', '母親', '父親', '阿嬤', '阿公', '外婆', '外公', '爺爺', '奶奶']);
+  const hasSpecificElder = rawWhoList.some(n => specificElders.has(n));
+  const genericElderTerms = new Set(['家長', '家人', '長輩', '大人']);
+  const whoList = rawWhoList.filter((name, idx) => !(idx > 0 && hasSpecificElder && genericElderTerms.has(name)));
   const whoActor = whoList[0] || '當事人';
   const whoAffected = whoList.slice(1).join('、');
   reportData.d1.who = `行為人：${whoActor}${whoAffected ? `；關係人/受影響人：${whoAffected}` : ''}`;
 
-  // (B) 物品/載具識別
-  const itemMatch = text.match(/(Switch電動|Switch|PS5|iPad|智慧手錶|手機遊戲點數卡|遊戲點數卡|點數卡|信用卡|手機|平板|電腦|筆電|遊戲機|耳機|充電線|充電器|遙控器|電視|冷氣|戶外教學通知單|通知單|准考證|學生證|悠遊卡|考卷|成績單|聯絡簿|數學習作|國語習作|自然習作|英文習作|習作|作業簿|參考書|講義|課本|字典|漫畫書|漫畫|故事書|小說|圖書|書本|直笛|美術用具|水彩筆|水彩|專業彩色筆|彩色筆|馬克筆|色鉛筆|原子筆|自動鉛筆|鉛筆盒|橡皮擦|剪刀|美工刀|圓規|尺|膠水|修正帶|文具|紙條|海報|黑板|收藏卡牌|寶可夢卡牌|寶可夢卡|遊戲王卡|卡牌|樂高積木|積木|模型|桌遊|棋子|拼圖|玩偶|娃娃|玩具|貼紙|史萊姆|口紅|香水|化妝品|籃球|躲避球|羽球拍|球拍|足球|排球|直排輪|滑板|自行車|腳踏車|單車|安全帽|護目鏡|滴管|實驗器材|撲滿|壓歲錢|零用錢|早餐錢|午餐錢|生活費|班費|補習費|找零|發票|鈔票|硬幣|[0-9]+元|保溫瓶|水壺|便當盒|餐具|碗盤|玻璃杯|馬克杯|杯子|吹風機|濕毛巾|毛巾|浴巾|床單|地毯|花盆|眼鏡|手錶|鑰匙|雨傘|外套|制服|運動服|球鞋|鞋子|臭襪子|襪子|書包|垃圾車|垃圾袋|垃圾|廚餘|飼料|泡麵|零食|辣條|糖果|巧克力|餅乾|炸雞|薯條|冰淇淋|布丁|蛋糕|草莓|珍珠奶茶|奶茶|汽水|可樂|果汁|牛奶|飲料|私人物品)/);
+  // (B) 物品/載具識別（支援雨衣、雨具與日常用品，依原文出現順序萃取）
+  const itemMatch = text.match(/(Switch電動|Switch|PS5|iPad|智慧手錶|手機遊戲點數卡|遊戲點數卡|點數卡|信用卡|手機|平板|電腦|筆電|遊戲機|耳機|充電線|充電器|遙控器|電視|冷氣|戶外教學通知單|通知單|聯絡單|准考證|學生證|悠遊卡|考卷|成績單|聯絡簿|數學習作|國語習作|自然習作|英文習作|習作|作業簿|參考書|講義|課本|字典|漫畫書|漫畫|故事書|小說|圖書|書本|直笛|美術用具|水彩盒|水彩筆|水彩|專業彩色筆|彩色筆|馬克筆|色鉛筆|原子筆|自動鉛筆|鉛筆盒|橡皮擦|剪刀|美工刀|圓規|尺|膠水|修正帶|文具|紙條|海報|黑板|收藏卡牌|寶可夢卡牌|寶可夢卡|遊戲王卡|卡牌|樂高積木|積木|模型|桌遊|棋子|拼圖|玩偶|娃娃|玩具|貼紙|史萊姆|口紅|香水|化妝品|籃球|躲避球|羽球拍|球拍|足球|排球|直排輪|滑板|自行車|腳踏車|單車|安全帽|護目鏡|滴管|實驗器材|撲滿|壓歲錢|零用錢|早餐錢|午餐錢|生活費|班費|補習費|找零|發票|鈔票|硬幣|[0-9]+元|保溫瓶|水壺|便當盒|便當|餐具|碗盤|玻璃杯|馬克杯|杯子|吹風機|濕毛巾|毛巾|浴巾|床單|地毯|花盆|眼鏡|手錶|鑰匙|雨衣|雨傘|雨具|雨鞋|外套|制服|運動服|球鞋|鞋子|備用襪子|臭襪子|襪子|書包|垃圾車|垃圾袋|垃圾|廚餘|飼料|泡麵|零食|辣條|糖果|巧克力|餅乾|炸雞|薯條|冰淇淋|布丁|蛋糕|草莓|珍珠奶茶|奶茶|汽水|可樂|果汁|牛奶|飲料|私人物品)/);
   if (itemMatch) {
     reportData.partName = itemMatch[0];
     reportData.machineNumber = itemMatch[0];
@@ -2635,12 +2641,26 @@ function parseRawTextTo5D(text) {
     reportData.d1.when = extractedWhen;
   }
 
-  // (D) 場所場域識別
-  const placeMatch = text.match(/(學校美術課|學校教室|歷史課教室|實驗室|實驗課|體育課|美術課|音樂課|操場司令台旁邊|操場司令台|操場|走廊|樓梯間|福利社|合作社|圖書館|體育館|游泳池|保健室|學務處|教務處|校門口|安親班門口|安親班|補習班|幼兒園|宿舍寢室|宿舍|寢室|同學家|鄰居家|親戚家|阿嬤家|外婆家|河濱公園|公園|籃球場|羽球場|球場|網咖|電玩店|超商|便利商店|百貨公司|大賣場|超市|文具店|書店|玩具店|夜市|餐廳|速食店|早餐店|公車上|捷運上|後座車上|車上|過馬路時|過馬路|馬路口|路口|馬路|路上|客廳沙發|客廳餐桌|客廳|房間床上|房間書桌|房間|個人臥室|臥室|棉被裡|床上|書房|書桌上|書桌|餐桌|廚房|冰箱|浴室|澡堂|廁所|洗手台|玄關|陽台|院子|水溝|學校|校外|家裡|家中|班上|教室)/);
-  if (placeMatch) {
-    const cleanPlace = placeMatch[0] === '過馬路時' ? '馬路' : placeMatch[0];
-    reportData.customerLine = cleanPlace;
-    reportData.d1.where = cleanPlace;
+  // (D) 場所場域識別（優先排序介系詞「在 + 地點」之核心案發場域，並支援多場域串接）
+  const placeRegex = /(學校美術課|學校教室|歷史課教室|實驗室|實驗課|體育課|美術課|音樂課|操場司令台旁邊|操場司令台|操場|走廊|樓梯間|福利社|合作社|圖書館|體育館|游泳池|保健室|學務處|教務處|校門口|安親班門口|安親班|補習班|幼兒園|宿舍寢室|宿舍|寢室|同學家|鄰居家|親戚家|阿嬤家|外婆家|河濱公園|公園|籃球場|羽球場|球場|網咖|電玩店|超商|便利商店|百貨公司|大賣場|超市|文具店|書店|玩具店|夜市|餐廳|速食店|早餐店|公車上|捷運上|後座車上|車上|過馬路時|過馬路|馬路口|路口|馬路|路上|客廳沙發|客廳餐桌|客廳|房間床上|房間書桌|房間|個人臥室|臥室|棉被裡|床上|書房|書桌上|書桌|餐桌|廚房|冰箱|浴室|澡堂|廁所|洗手台|玄關|陽台|院子|水溝|學校|校外|家裡|家中|班上|教室)/g;
+  const foundPlaces = [];
+  let pMatch;
+  while ((pMatch = placeRegex.exec(text)) !== null) {
+    const rawP = pMatch[0] === '過馬路時' ? '馬路' : pMatch[0];
+    const isAtPreposition = pMatch.index > 0 && text[pMatch.index - 1] === '在';
+    const existing = foundPlaces.find(fp => fp.name.includes(rawP) || rawP.includes(fp.name));
+    if (!existing) {
+      foundPlaces.push({ name: rawP, isAt: isAtPreposition, pos: pMatch.index });
+    } else if (isAtPreposition && !existing.isAt) {
+      existing.isAt = true;
+      if (rawP.length > existing.name.length) existing.name = rawP;
+    }
+  }
+  if (foundPlaces.length > 0) {
+    foundPlaces.sort((a, b) => (b.isAt ? 1 : 0) - (a.isAt ? 1 : 0) || a.pos - b.pos);
+    const mergedPlaces = foundPlaces.slice(0, 2).map(p => p.name).join(' / ');
+    reportData.customerLine = mergedPlaces;
+    reportData.d1.where = mergedPlaces;
   }
 
   // (E) 事實陳述 What
@@ -2657,9 +2677,13 @@ function parseRawTextTo5D(text) {
   if (whyRuleMatch) {
     reportData.d1.why = whyRuleMatch[0].trim();
   }
-  const howMatch = text.match(/([^，。；.\n]*(?:叫不醒|詢問時|打電話通知|致電家長|巡堂時|檢查時|點名時|抽查時|聽見|聽到|看到|撞見|聞到|發現時|才發現|被發現|發現|抓到|察覺|通報|當場沒收|當場制止)[^，。；.\n]*)/);
-  if (howMatch) {
-    reportData.d1.how = howMatch[0].trim();
+  // 兩階段識別「如何被發現 (d1.how)」：第一優先匹配被動或長輩/師長察覺通報，避免誤抓當事人「起床發現下雨」等環境句
+  const howPassiveOrAdultMatch = text.match(/((?:被[^，。；.\n]*(?:發現|看到|抓到|通知|通報|制止|攔下|沒收|記警告)[^，。；.\n]*)|(?:[^，。；.\n]*(?:媽媽|爸爸|家長|老師|導師|大人|同學|姊姊|哥哥|弟弟|妹妹|阿姨|校護|護理師|教練|警衛)[^，。；.\n]*(?:叫不醒|詢問|打電話|致電|巡堂|檢查|點名|抽查|聽見|聽到|看到|撞見|聞到|發現|抓到|察覺|通知|通報|當場沒收|當場制止|攔下)[^，。；.\n]*)|(?:[^，。；.\n]*(?:叫不醒|詢問時|打電話通知|致電家長|巡堂時|檢查時|點名時|抽查時)[^，。；.\n]*))/);
+  const howGeneralMatch = !howPassiveOrAdultMatch && text.match(/([^，。；.\n]*(?:發現時|才發現|被發現|抓到|察覺|通報|當場沒收|當場制止|發現(?!外面|下雨|天黑|沒電))[^，。；.\n]*)/);
+  if (howPassiveOrAdultMatch) {
+    reportData.d1.how = howPassiveOrAdultMatch[0].trim();
+  } else if (howGeneralMatch) {
+    reportData.d1.how = howGeneralMatch[0].trim();
   }
   const d2Match = text.match(/(?:當下|立刻|馬上|第一時間|緊急處置是|緊急處理)[：:為是]?([^，。；.\n]+)/);
   if (d2Match) {
@@ -2695,6 +2719,8 @@ function parseRawTextTo5D(text) {
     reportData.title = `${whoActor}物品借用與尊重他人界限事件分析`;
   } else if (text.match(/(遙控器|電視|搶奪|爭吵|吵架|打架|口角|推擠|吃醋|說壞話)/)) {
     reportData.title = `${whoActor}手足與同儕人際互動衝突事件分析`;
+  } else if (text.match(/(發脾氣|大發脾氣|甩門|頂嘴|大吼|大叫|耍賴|哭鬧|罵髒話|不禮貌|態度|嫌麻煩)/)) {
+    reportData.title = `${whoActor}情緒表達與家庭禮貌溝通事件分析`;
   } else {
     reportData.title = `${whoActor}日常生活常規事件分析`;
   }
@@ -2749,6 +2775,7 @@ function generateClarificationQuestions() {
   const isStudyHomework = !isMoneySpend && !isSafetyHealth && !isChoreHygiene && !isRoutineSleep && !isOutingLate && !!desc.match(/(作業|功課|聯絡簿|習作|考卷|成績單|未交|缺交|沒寫|代簽|隱瞞|作弊|偷看|傳紙條|忘記帶|直笛|美術用具|通知單)/);
   const isItemConflict = !isMoneySpend && !isSafetyHealth && !isChoreHygiene && !isRoutineSleep && !isOutingLate && !isStudyHomework && !!desc.match(/(彩色筆|筆記本|文具|水壺|保溫瓶|漫畫書|卡牌|玩偶|玩具|籃球|手錶|眼鏡|橡皮擦|私人物品|擅自|沒經過同意|未經同意|借來|摔斷|損壞|弄壞|弄髒|弄丟|踢進水溝)/);
   const isSiblingConflict = !isMoneySpend && !isSafetyHealth && !isChoreHygiene && !isRoutineSleep && !isOutingLate && !isStudyHomework && !isItemConflict && !!desc.match(/(遙控器|電視|搶走|搶奪|互推|推擠|吵架|爭吵|口角|打架|手足|吃醋|說壞話|不理對方|大吵大鬧|踢對方)/);
+  const isEmotionAttitude = !isMoneySpend && !isSafetyHealth && !isChoreHygiene && !isRoutineSleep && !isOutingLate && !isStudyHomework && !isItemConflict && !isSiblingConflict && !!desc.match(/(發脾氣|大發脾氣|甩門|頂嘴|大吼|大叫|耍賴|哭鬧|罵髒話|不禮貌|態度|嫌麻煩|不聽勸)/);
 
   // 根據領域準備建議值
   let suggWhy = '違反日常生活常規、個人自律或生活共同約定';
@@ -2841,6 +2868,16 @@ function generateClarificationQuestions() {
     suggD3 = '當下急於滿足個人需求缺乏同理心與耐心，直覺以爭搶或情緒言語作為解決手段';
     suggD4 = '雙方互相誠懇道歉握手言和，並使用計時器或猜拳輪流機制決定優先順序';
     suggD5 = '家庭與同儕理性溝通、輪流分享與情緒冷靜生活公約';
+  } else if (isEmotionAttitude) {
+    suggWhy = '違反「尊重家人與師長善意提醒、理性表達個人情緒，嚴禁甩門頂嘴或發脾氣」之家庭禮貌約定';
+    suggHow = '當事人於現場情緒失控大發脾氣，或後續衍生身體不適與異常狀況由師長通知家長得知';
+    suggImpact = '造成家庭溝通氣氛緊繃、長輩傷心難過，亦因賭氣不聽勸告導致自身受涼生病或作息受損';
+    suggWhere = '家中玄關 / 客廳 / 學校';
+    suggWhen = '事發當日出門前時段';
+    suggD2 = '先照顧當事人身體狀況（如擦乾保暖或喝溫水冷靜），待雙方情緒平復後再進行溫和對話';
+    suggD3 = '當下嫌麻煩或起床氣導致情緒耐受度低，習慣以發脾氣、甩門等激烈方式抗拒長輩提醒';
+    suggD4 = '主動為發脾氣與甩門的不禮貌行為向家人誠懇道歉，並養成出門前配合天氣檢查隨身衣物之習慣';
+    suggD5 = '家庭理性情緒表達、好好說話與尊重長輩提醒生活公約';
   }
 
   // 診斷所有缺漏資訊
