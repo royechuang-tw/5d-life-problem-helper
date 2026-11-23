@@ -2304,7 +2304,8 @@ function initSmartInput() {
   if (btnAutoDemo) {
     btnAutoDemo.addEventListener('click', () => {
       const sel = document.getElementById('demo-scenario-select');
-      runShortVideoAutoDemo(sel ? sel.value : 'phone');
+      const speedSel = document.getElementById('demo-speed-select');
+      runShortVideoAutoDemo(sel ? sel.value : 'phone', speedSel ? speedSel.value : 'fast');
     });
   }
 
@@ -2313,7 +2314,8 @@ function initSmartInput() {
     if (e.altKey && (e.key === 'd' || e.key === 'D')) {
       e.preventDefault();
       const sel = document.getElementById('demo-scenario-select');
-      runShortVideoAutoDemo(sel ? sel.value : 'phone');
+      const speedSel = document.getElementById('demo-speed-select');
+      runShortVideoAutoDemo(sel ? sel.value : 'phone', speedSel ? speedSel.value : 'fast');
     }
   });
 }
@@ -2322,11 +2324,16 @@ let isAutoDemoRunning = false;
 const AUTO_DEMO_SCENARIOS = {
   phone: '小明昨天玩手機玩到清晨1點才睡覺，造成今天早上起不來上學遲到。',
   borrow: '弟弟昨天下午在家裡客廳沒經過姊姊同意，直接拿姊姊鉛筆盒裡的專業彩色筆來畫畫還弄斷筆芯，造成姊姊非常生氣。',
-  money: '小明這禮拜把媽媽給的500元早餐錢省下來，偷偷拿去超商買手機遊戲點數卡儲值，今天媽媽整理發票時才發現。'
+  money: '小明這禮拜把媽媽給的500元早餐錢省下來，偷偷拿去超商買手機遊戲點數卡儲值，今天媽媽整理發票時才發現。',
+  outing: '小華今天下課後跟同學去公園打球到晚上8點才回家，事前都沒有跟家人報備，造成媽媽非常擔心。',
+  study: '小強這禮拜在學校連續三天沒交數學習作，還自己偷偷在聯絡簿上代簽媽媽的名字，老師打電話通知才被發現。',
+  sibling: '哥哥跟弟弟今天傍晚在客廳為了搶電視遙控器大吵一架，哥哥還動手推了弟弟一把，害弟弟跌倒大哭。',
+  chore: '弟弟這個禮拜輪到負責倒垃圾，結果昨晚因為在客廳看電視忘記去追垃圾車，造成家裡廚餘發臭。',
+  safety: '小明今天早上騎腳踏車去學校時沒有戴安全帽，還在馬路路口搶快闖黃燈，被導護老師當場攔下來勸導。'
 };
 
 // 短影音錄製專用：一鍵自動模擬真人逐字輸入、分析、補充看板更新至 100% 並切換 A4 報告預覽
-window.runShortVideoAutoDemo = async function(scenarioKey = 'phone') {
+window.runShortVideoAutoDemo = async function(scenarioKey = 'phone', speedMode = 'fast') {
   if (isAutoDemoRunning) return;
   isAutoDemoRunning = true;
   const btnAuto = document.getElementById('btn-auto-demo');
@@ -2335,12 +2342,15 @@ window.runShortVideoAutoDemo = async function(scenarioKey = 'phone') {
     btnAuto.textContent = '示範播放中...';
   }
 
+  const isNormal = speedMode === 'normal';
+  const charDelay = isNormal ? 95 : 50;
+  const stepDelay = isNormal ? 2600 : 1350;
   const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
   try {
     // 1. 清空重寫回到第一步純淨畫面
     clearAllReportData();
-    await sleep(600);
+    await sleep(isNormal ? 1000 : 550);
 
     // 2. 模擬真人逐字輸入案例文字
     const demoText = AUTO_DEMO_SCENARIOS[scenarioKey] || AUTO_DEMO_SCENARIOS.phone;
@@ -2350,30 +2360,34 @@ window.runShortVideoAutoDemo = async function(scenarioKey = 'phone') {
       textarea.value = '';
       for (const ch of demoText) {
         textarea.value += ch;
-        await sleep(55);
+        await sleep(charDelay);
       }
     }
-    await sleep(700);
+    await sleep(isNormal ? 1200 : 650);
 
     // 3. 觸發分析並展開即時看板與小幫手提問
     parseRawTextTo5D(demoText);
-    await sleep(1400);
+    await sleep(stepDelay);
 
     // 4. 自動點選第 1 題建議參考，展示綠色「最新補充已寫入報告」與「剛更新」標籤
     if (currentPendingQuestions && currentPendingQuestions.length > 0) {
       const firstQ = currentPendingQuestions[0];
       applyQuickAnswer(firstQ.field, firstQ.quickVal);
     }
-    await sleep(1400);
+    await sleep(stepDelay);
 
     // 5. 自動一鍵代入剩餘全部建議參考，完整度達標 100%
     if (typeof window.applyAllQuickAnswers === 'function') {
       window.applyAllQuickAnswers();
     }
-    await sleep(1600);
+    await sleep(stepDelay);
 
-    // 6. 自動切換至「預覽完整報告」展示 A4 正式生活約定單
+    // 6. 自動切換至「預覽完整報告」展示 A4 正式生活約定單並平滑捲動瀏覽
     switchToTab('tab-preview');
+    await sleep(isNormal ? 1800 : 900);
+    window.scrollTo({ top: 420, behavior: 'smooth' });
+    await sleep(isNormal ? 2000 : 1000);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   } finally {
     isAutoDemoRunning = false;
     if (btnAuto) {

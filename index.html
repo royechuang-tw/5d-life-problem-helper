@@ -77,11 +77,20 @@
           <button id="btn-parse-text" class="btn btn-primary" style="padding: 9px 18px; font-size: 14px;">
             <span>開始分析並整理報告</span>
           </button>
-          <div style="display: inline-flex; align-items: center; gap: 6px; background: var(--bg-subtle); padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+          <div style="display: inline-flex; align-items: center; gap: 6px; background: var(--bg-subtle); padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); flex-wrap: wrap;">
             <select id="demo-scenario-select" class="form-control" style="width: auto; padding: 4px 8px; font-size: 12.5px; height: 30px;">
               <option value="phone">案例 1：熬夜玩手機遲到（3C 作息）</option>
               <option value="borrow">案例 2：沒問過拿姊姊彩色筆弄壞（物品界限）</option>
               <option value="money">案例 3：早餐錢拿去超商買點數（金錢自律）</option>
+              <option value="outing">案例 4：放學跟同學去玩晚歸未報備（外出安全）</option>
+              <option value="study">案例 5：作業沒交還自己代簽聯絡簿（學業誠信）</option>
+              <option value="sibling">案例 6：兄弟搶電視遙控器吵架推擠（手足衝突）</option>
+              <option value="chore">案例 7：看電視忘記倒垃圾害廚餘發臭（家務分工）</option>
+              <option value="safety">案例 8：騎腳踏車沒戴安全帽路口搶快（交通安全）</option>
+            </select>
+            <select id="demo-speed-select" class="form-control" style="width: auto; padding: 4px 8px; font-size: 12.5px; height: 30px;" title="選擇自動播放節奏速度">
+              <option value="fast" selected>快節奏（短影音 8 秒）</option>
+              <option value="normal">解說節奏（配口白 15 秒）</option>
             </select>
             <button id="btn-auto-demo" type="button" class="btn btn-secondary btn-sm" title="自動模擬真人打字與 5D 完整分析流程（快捷鍵 Alt+D）">自動播放示範</button>
           </div>
