@@ -77,6 +77,14 @@
           <button id="btn-parse-text" class="btn btn-primary" style="padding: 9px 18px; font-size: 14px;">
             <span>開始分析並整理報告</span>
           </button>
+          <div style="display: inline-flex; align-items: center; gap: 6px; background: var(--bg-subtle); padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+            <select id="demo-scenario-select" class="form-control" style="width: auto; padding: 4px 8px; font-size: 12.5px; height: 30px;">
+              <option value="phone">案例 1：熬夜玩手機遲到（3C 作息）</option>
+              <option value="borrow">案例 2：沒問過拿姊姊彩色筆弄壞（物品界限）</option>
+              <option value="money">案例 3：早餐錢拿去超商買點數（金錢自律）</option>
+            </select>
+            <button id="btn-auto-demo" type="button" class="btn btn-secondary btn-sm" title="自動模擬真人打字與 5D 完整分析流程（快捷鍵 Alt+D）">自動播放示範</button>
+          </div>
           <button id="btn-paste-sample-text" class="btn btn-secondary" style="display: none;">帶入生活案例文字</button>
           <button id="btn-toggle-ai-settings" class="btn btn-secondary btn-sm" style="margin-left: auto; color: var(--text-muted);">進階 AI 設定（選填）</button>
         </div>
