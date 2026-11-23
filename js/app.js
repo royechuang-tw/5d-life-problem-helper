@@ -2777,7 +2777,7 @@ function generateClarificationQuestions() {
     }
     container.innerHTML = `
       <div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px 12px; line-height: 1.6;">
-        請在上方輸入框描述生活事件，或點擊右上角「載入生活實例」；小幫手將協助進行 5D 結構化拆解並提供具體建議。
+        請在上方輸入框描述生活事件，或選擇上方 8 大生活案例點擊「自動播放示範」；小幫手將協助進行 5D 結構化拆解並提供具體建議。
       </div>
     `;
     if (replyBox) replyBox.style.display = 'none';
