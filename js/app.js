@@ -267,22 +267,22 @@ document.addEventListener('DOMContentLoaded', () => {
   initActionButtons();
   initSmartInput();
 
-  // 檢查是否有本機自動暫存；若無，則載入生活實例作為初次引導
+  // 檢查是否有本機自動暫存；若無，則以純淨空白狀態啟動，讓使用者可直接輸入或點選 8 大案例自動示範
   const savedDraft = localStorage.getItem('5D_REPORT_AUTOSAVE');
   if (savedDraft) {
     try {
       reportData = normalizeReportData(JSON.parse(savedDraft));
-      populateFormFromData();
-      renderAllDynamicFields();
-      renderLivePreview();
-      updateAuditAndScore();
-      generateClarificationQuestions();
     } catch (e) {
-      loadLifeDemoData();
+      reportData = getBlankReportData();
     }
   } else {
-    loadLifeDemoData();
+    reportData = getBlankReportData();
   }
+  populateFormFromData();
+  renderAllDynamicFields();
+  renderLivePreview();
+  updateAuditAndScore();
+  generateClarificationQuestions();
 });
 
 // 分頁切換 (Tabs)
@@ -1065,24 +1065,6 @@ window.jumpToField = function(tabId, fieldId) {
 // 快捷操作與匯出模組 (Export & Actions)
 // ==========================================================================
 function initActionButtons() {
-  // 模式切換器
-  const modeSelector = document.getElementById('mode-selector');
-  if (modeSelector) {
-    modeSelector.addEventListener('change', () => {
-      applyAppMode(modeSelector.value);
-    });
-  }
-
-  // 載入生活實例
-  const btnLifeDemo = document.getElementById('btn-load-life-demo');
-  if (btnLifeDemo) {
-    btnLifeDemo.addEventListener('click', () => {
-      if (confirm('載入生活實例將覆蓋當前編輯區內容，是否確認載入？')) {
-        loadLifeDemoData();
-      }
-    });
-  }
-
   // 清空重置
   const btnReset = document.getElementById('btn-reset-form');
   if (btnReset) {
@@ -1234,15 +1216,6 @@ function applyAppMode() {
   const titleEl = document.querySelector('.brand-title');
   if (titleEl) {
     titleEl.textContent = '5D 生活問題小幫手';
-  }
-}
-
-function updateLabel(selector, newText) {
-  const label = document.querySelector(selector);
-  if (label) {
-    const isRequired = newText.includes('*');
-    const cleanText = newText.replace('*', '').trim();
-    label.innerHTML = `${cleanText} ${isRequired ? '<span class="required">*</span>' : ''}`;
   }
 }
 
@@ -1402,48 +1375,26 @@ function generateWordHtmlString() {
         </tr>
         <tr>
           <th>Why（違反什麼約定）</th>
-          <td>${escapeHtml(reportData.d1.why)}</td>
+          <td>${escapeHtml(reportData.d1.why || '-')}</td>
           <th>How（如何被發現）</th>
-          <td>${escapeHtml(reportData.d1.how)}</td>
+          <td>${escapeHtml(reportData.d1.how || '-')}</td>
         </tr>
         <tr>
-          <th>How Many（影響範圍）</th>
-          <td>${escapeHtml(reportData.d1.howMany)}</td>
-          <th>違規與影響程度</th>
-          <td><strong class="badge-danger">${escapeHtml(reportData.d1.defectRate)}</strong></td>
-        </tr>
-        <tr>
-          <th>心情與信任影響</th>
-          <td colspan="3">${escapeHtml(reportData.d1.impactScope)}</td>
+          <th>對大家的感受與影響</th>
+          <td colspan="3">${escapeHtml(reportData.d1.impactScope || '-')}</td>
         </tr>
       </table>
 
       <!-- D2 現狀圍堵措施 -->
-      <h2>D2：現場與物品緊急怎麼做？（緊急處置）</h2>
-      <table>
-        <tr>
-          <th style="width: 25%;">核心場所物品清查（家中/現場）</th>
-          <td>${escapeHtml(reportData.d2.factoryStock)}</td>
-        </tr>
-        <tr>
-          <th>移動途徑物品確認（路途/書包）</th>
-          <td>${escapeHtml(reportData.d2.transitStock)}</td>
-        </tr>
-        <tr>
-          <th>外溢場所處置（學校/外部場所）</th>
-          <td>${escapeHtml(reportData.d2.customerStock)}</td>
-        </tr>
-      </table>
-
-      <div style="font-weight:bold; margin: 8pt 0 4pt 0; color:#1e3a8a;">緊急處置措施執行表：</div>
+      <h2>D2：當下緊急怎麼處理？（緊急處置）</h2>
       <table>
         <thead>
           <tr>
-            <th style="width: 40%;">處置作為</th>
-            <th style="width: 15%;">責任人</th>
-            <th style="width: 15%;">期限</th>
-            <th style="width: 10%;">狀態</th>
-            <th style="width: 20%;">確認結果</th>
+            <th style="width: 40%;">具體做了什麼處置</th>
+            <th style="width: 15%;">誰負責</th>
+            <th style="width: 15%;">完成時間</th>
+            <th style="width: 10%;">目前進度</th>
+            <th style="width: 20%;">確認的結果</th>
           </tr>
         </thead>
         <tbody>
@@ -1455,16 +1406,14 @@ function generateWordHtmlString() {
               <td>${escapeHtml(a.status)}</td>
               <td>${escapeHtml(a.result)}</td>
             </tr>
-          `).join('') : '<tr><td colspan="5" style="text-align:center;">無處置項目記錄</td></tr>'}
+          `).join('') : '<tr><td colspan="5" style="text-align:center;">尚無緊急處置記錄</td></tr>'}
         </tbody>
       </table>
-      <p><strong>現場處置效果確認結論：</strong>${escapeHtml(reportData.d2.containmentVerification)}</p>
-
-      <div class="page-break"></div>
+      <p><strong>緊急處理後的確認結果：</strong>${escapeHtml(reportData.d2.containmentVerification || '待確認')}</p>
 
       <!-- D3 根本原因分析 -->
       <h2>D3：為什麼會這樣？（深入找原因 5 Why）</h2>
-      <div style="font-weight:bold; margin-bottom: 4pt; color:#1e3a8a;">為什麼會做這件事？（動機推導 Why Made）：</div>
+      <div style="font-weight:bold; margin-bottom: 4pt; color:#1e3a8a;">為什麼會做這件事？（動機推導）：</div>
       <table>
         <thead>
           <tr>
@@ -1484,7 +1433,8 @@ function generateWordHtmlString() {
         </tbody>
       </table>
 
-      <div style="font-weight:bold; margin-top: 10pt; margin-bottom: 4pt; color:#1e3a8a;">為什麼當下沒被發現或阻止？（防範推導 Why Escaped）：</div>
+      ${reportData.d3.whyEscapedChain && reportData.d3.whyEscapedChain.some(w => w && (w.answer || w.question)) ? `
+      <div style="font-weight:bold; margin-top: 10pt; margin-bottom: 4pt; color:#1e3a8a;">為什麼當下沒被發現或阻止？（把關機制推導）：</div>
       <table>
         <thead>
           <tr>
@@ -1494,17 +1444,17 @@ function generateWordHtmlString() {
           </tr>
         </thead>
         <tbody>
-          ${reportData.d3.whyEscapedChain.length > 0 ? reportData.d3.whyEscapedChain.map(w => `
+          ${reportData.d3.whyEscapedChain.map(w => `
             <tr>
               <td><strong>${escapeHtml(w.level)}</strong></td>
               <td>${escapeHtml(w.question)}</td>
               <td>${escapeHtml(w.answer)}</td>
             </tr>
-          `).join('') : '<tr><td colspan="3" style="text-align:center;">無推導資料</td></tr>'}
+          `).join('')}
         </tbody>
-      </table>
+      </table>` : ''}
       <p style="margin-top: 8pt; padding: 6pt; background-color:#eff6ff; border: 1px solid #bfdbfe;">
-        <strong>根本原因確認總結：</strong>${escapeHtml(reportData.d3.rootCauseSummary)}
+        <strong>最後找出的真正原因總結：</strong>${escapeHtml(reportData.d3.rootCauseSummary)}
       </p>
 
       <!-- D4 永久改善對策 -->
@@ -1575,6 +1525,7 @@ function generateWordHtmlString() {
         </tbody>
       </table>
 
+      ${reportData.d5.horizontalDeployment && reportData.d5.horizontalDeployment.some(h => h && (h.target || h.action)) ? `
       <div style="font-weight:bold; margin-top: 10pt; margin-bottom: 4pt; color:#1e3a8a;">舉一反三：其他東西也要注意（互相提醒與留意）：</div>
       <table>
         <thead>
@@ -1586,19 +1537,19 @@ function generateWordHtmlString() {
           </tr>
         </thead>
         <tbody>
-          ${reportData.d5.horizontalDeployment.length > 0 ? reportData.d5.horizontalDeployment.map(h => `
+          ${reportData.d5.horizontalDeployment.map(h => `
             <tr>
               <td>${escapeHtml(h.target)}</td>
               <td>${escapeHtml(h.action)}</td>
               <td>${escapeHtml(h.dueDate)}</td>
               <td>${escapeHtml(h.owner)}</td>
             </tr>
-          `).join('') : '<tr><td colspan="4" style="text-align:center;">尚無互相提醒項目</td></tr>'}
+          `).join('')}
         </tbody>
-      </table>
+      </table>` : ''}
 
-      <!-- 家長/老師見證評語區塊 -->
-      <table style="margin-top: 16pt;">
+      <!-- 家長/老師見證評語與雙方親筆簽認欄 -->
+      <table style="margin-top: 14pt;">
         <tr>
           <th style="width: 18%;">家長 / 老師見證評語</th>
           <td style="width: 42%;">${escapeHtml(reportData.d5.signOff.qaComment || '待確認評語')}</td>
@@ -1606,6 +1557,12 @@ function generateWordHtmlString() {
           <td style="width: 13%; text-align:center;"><strong>${escapeHtml(reportData.d5.signOff.qaStatus)}</strong></td>
           <th style="width: 7%;">日期</th>
           <td style="width: 7%; text-align:center;">${escapeHtml(reportData.d5.signOff.signDate || reportData.dateCreated)}</td>
+        </tr>
+        <tr>
+          <th>當事人承諾簽名</th>
+          <td style="height: 28pt;"></td>
+          <th>家長 / 師長見證簽名</th>
+          <td colspan="3" style="height: 28pt;"></td>
         </tr>
       </table>
     </div>
@@ -1736,10 +1693,8 @@ function exportPptxPresentation() {
         { text: reportData.d1.how || '-' }
       ],
       [
-        { text: 'How Many（影響程度或次數）', options: { bold: true } },
-        { text: reportData.d1.howMany || '-' },
-        { text: '嚴重程度與違規情形', options: { bold: true, color: 'DC2626' } },
-        { text: reportData.d1.defectRate || '-', options: { bold: true, color: 'DC2626' } }
+        { text: '對大家的感受與影響', options: { bold: true, color: 'DC2626' } },
+        { text: reportData.d1.impactScope || '-', options: { colspan: 3, color: 'DC2626', bold: true } }
       ]
     ];
 
@@ -2059,16 +2014,10 @@ function renderLivePreview() {
           <td>${escapeHtml(reportData.d1.what || '-')}</td>
         </tr>
         <tr>
-          <th>Why</th>
+          <th>Why（違反約定）</th>
           <td>${escapeHtml(reportData.d1.why || '-')}</td>
-          <th>How</th>
+          <th>How（如何發現）</th>
           <td>${escapeHtml(reportData.d1.how || '-')}</td>
-        </tr>
-        <tr>
-          <th>How Many</th>
-          <td>${escapeHtml(reportData.d1.howMany || '-')}</td>
-          <th>嚴重程度與違規情形</th>
-          <td><strong style="color:#dc2626;">${escapeHtml(reportData.d1.defectRate || '-')}</strong></td>
         </tr>
         <tr>
           <th>對大家的感受與影響</th>
@@ -2079,22 +2028,7 @@ function renderLivePreview() {
 
     <!-- D2 -->
     <div class="preview-section">
-      <div class="preview-section-title">D2：現場與物品緊急怎麼做？（緊急處置）</div>
-      <table class="data-table" style="margin-bottom: 12px;">
-        <tr>
-          <th style="width: 25%;">1. 現場立即處置</th>
-          <td>${escapeHtml(reportData.d2.factoryStock || '-')}</td>
-        </tr>
-        <tr>
-          <th>2. 過程與隨身檢查</th>
-          <td>${escapeHtml(reportData.d2.transitStock || '-')}</td>
-        </tr>
-        <tr>
-          <th>3. 向重要關係人說明</th>
-          <td>${escapeHtml(reportData.d2.customerStock || '-')}</td>
-        </tr>
-      </table>
-      <div style="font-weight:bold; font-size:13px; margin-bottom:6px;">當下立刻做的緊急行動清單：</div>
+      <div class="preview-section-title">D2：當下緊急怎麼處理？（緊急處置）</div>
       <table class="data-table">
         <thead>
           <tr>
@@ -2120,11 +2054,10 @@ function renderLivePreview() {
       <p style="margin-top: 8px; font-size:12px;"><strong>緊急處理後的確認結果：</strong>${escapeHtml(reportData.d2.containmentVerification || '待確認')}</p>
     </div>
 
-    <div class="page-break"></div>
-
     <!-- D3 -->
     <div class="preview-section">
       <div class="preview-section-title">D3：為什麼會這樣？（深入找原因 5 Why）</div>
+      ${reportData.d3.whyEscapedChain && reportData.d3.whyEscapedChain.some(w => w && (w.answer || w.question)) ? `
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 12px;">
         <div style="border: 1px solid #cbd5e1; padding: 12px; border-radius: 4px; background-color: #f8fafc;">
           <strong style="color: #1e3a8a;">為什麼會做這件事？（動機推導）：</strong>
@@ -2139,10 +2072,18 @@ function renderLivePreview() {
           <div style="margin-top: 8px; font-size: 12px;">
             ${reportData.d3.whyEscapedChain.map(w => `
               <div style="margin-bottom: 6px;"><strong>${escapeHtml(w.level)}：</strong>${escapeHtml(w.answer || w.question)}</div>
-            `).join('') || '<span style="color:#94a3b8;">尚無把關機制推導資料</span>'}
+            `).join('')}
           </div>
         </div>
-      </div>
+      </div>` : `
+      <div style="border: 1px solid #cbd5e1; padding: 12px; border-radius: 4px; background-color: #f8fafc; margin-bottom: 12px;">
+        <strong style="color: #1e3a8a;">為什麼會做這件事？（動機推導）：</strong>
+        <div style="margin-top: 8px; font-size: 12px;">
+          ${reportData.d3.whyMadeChain.map(w => `
+            <div style="margin-bottom: 6px;"><strong>${escapeHtml(w.level)}：</strong>${escapeHtml(w.answer || w.question)}</div>
+          `).join('') || '<span style="color:#94a3b8;">尚無動機原因推導資料</span>'}
+        </div>
+      </div>`}
       <div style="padding: 10px 14px; background-color: #eff6ff; border-left: 4px solid #2563eb; font-size: 13px;">
         <strong>最後找出的真正原因總結：</strong>${escapeHtml(reportData.d3.rootCauseSummary || '尚未總結')}
       </div>
@@ -2217,6 +2158,7 @@ function renderLivePreview() {
           `).join('') : '<tr><td colspan="5" style="text-align:center; color:#94a3b8;">尚無生活約定記錄</td></tr>'}
         </tbody>
       </table>
+      ${reportData.d5.horizontalDeployment && reportData.d5.horizontalDeployment.some(h => h && (h.target || h.action)) ? `
       <div style="font-weight:bold; font-size:13px; margin-bottom:6px;">舉一反三：其他東西也要注意（互相提醒與留意）：</div>
       <table class="data-table" style="margin-bottom: 16px;">
         <thead>
@@ -2228,23 +2170,32 @@ function renderLivePreview() {
           </tr>
         </thead>
         <tbody>
-          ${reportData.d5.horizontalDeployment.length > 0 ? reportData.d5.horizontalDeployment.map(h => `
+          ${reportData.d5.horizontalDeployment.map(h => `
             <tr>
               <td>${escapeHtml(h.target)}</td>
               <td>${escapeHtml(h.action)}</td>
               <td>${escapeHtml(h.dueDate)}</td>
               <td>${escapeHtml(h.owner)}</td>
             </tr>
-          `).join('') : '<tr><td colspan="4" style="text-align:center; color:#94a3b8;">尚無互相提醒項目</td></tr>'}
+          `).join('')}
         </tbody>
-      </table>
-      <div style="border: 1px solid #cbd5e1; padding: 12px; background-color: #f8fafc; border-radius: 4px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+      </table>` : ''}
+      <div style="border: 1px solid #cbd5e1; padding: 12px; background-color: #f8fafc; border-radius: 4px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom: 14px;">
         <div><strong>家長 / 老師見證評語：</strong>${escapeHtml(reportData.d5.signOff.qaComment || '待確認評語')}</div>
         <div style="display:flex; gap:16px; align-items:center;">
           <div><strong>處理結果判定：</strong><span style="font-weight:bold; color:#1e3a8a;">${escapeHtml(reportData.d5.signOff.qaStatus)}</span></div>
           <div><strong>見證日期：</strong>${escapeHtml(reportData.d5.signOff.signDate || reportData.dateCreated || '-')}</div>
         </div>
       </div>
+      <!-- 紙本列印雙方親筆簽認欄 -->
+      <table class="data-table">
+        <tr>
+          <th style="width: 18%;">當事人承諾簽名</th>
+          <td style="width: 32%; height: 42px; color: #94a3b8; font-size: 11px;">（請親筆簽名）</td>
+          <th style="width: 18%;">家長 / 師長見證簽名</th>
+          <td style="width: 32%; height: 42px; color: #94a3b8; font-size: 11px;">（請親筆簽名）</td>
+        </tr>
+      </table>
     </div>
   `;
 }
@@ -2260,13 +2211,16 @@ function initSmartInput() {
     btnParse.addEventListener('click', runSmartAnalysis);
   }
 
-  const btnPasteSample = document.getElementById('btn-paste-sample-text');
-  if (btnPasteSample) {
-    btnPasteSample.addEventListener('click', () => {
-      const sampleText = `小豬弟弟無故在未取得小雞姊姊的同意下，擅自將小雞姊姊房間床上的玩偶在 11/18 早上出門時帶去學校展示給同學看，並提供給同學玩，請幫我分析並產出報告。`;
+  const demoSelect = document.getElementById('demo-scenario-select');
+  if (demoSelect) {
+    demoSelect.addEventListener('change', () => {
+      if (isAutoDemoRunning) return;
+      const sampleText = AUTO_DEMO_SCENARIOS[demoSelect.value];
       const textarea = document.getElementById('raw-input-text');
-      if (textarea) textarea.value = sampleText;
-      showToast('已帶入生活案例文字（拿玩偶事件）', 'info');
+      if (textarea && sampleText) {
+        textarea.value = sampleText;
+        showToast('已帶入所選案例文字，可點擊「開始分析並整理報告」或「自動播放示範」！', 'info');
+      }
     });
   }
 

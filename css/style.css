@@ -597,6 +597,44 @@ textarea.form-control {
   }
 }
 
+/* 手機與窄螢幕響應式優化 (Mobile RWD < 640px) */
+@media (max-width: 640px) {
+  .navbar {
+    padding: 10px 14px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .nav-brand {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .brand-title {
+    font-size: 16px;
+  }
+  .nav-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .main-layout {
+    margin: 12px auto;
+    padding: 0 10px;
+  }
+  .tab-panel {
+    padding: 14px;
+  }
+  .preview-paper {
+    padding: 16px;
+  }
+  .preview-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .preview-meta {
+    text-align: left;
+  }
+}
+
 /* 列印樣式適配 */
 @media print {
   .navbar, .sidebar, .tab-nav, .btn, .no-print {
